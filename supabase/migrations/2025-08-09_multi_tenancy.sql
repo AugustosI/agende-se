@@ -72,7 +72,7 @@ begin
 end;
 $$;
 
--- 4) Adicionar coluna empresa_id nas tabelas de domínio
+-- 4) Adicionar coluna empresa_id nas tabelas de domínio (caso já existam)
 do $$ begin
   if not exists (
     select 1 from information_schema.columns
@@ -128,50 +128,11 @@ exception when undefined_table then null; end $$;
 
 -- 4.2) Backfill: definir empresa_id com base no user_id -> user_empresas
 -- Nota: Assume que as tabelas têm coluna user_id (uuid)
-do $$ begin
-  begin
-    update public.clientes c
-    set empresa_id = sub.empresa_id
-    from (
-      select distinct on (ue.user_id) ue.user_id, ue.empresa_id
-      from public.user_empresas ue
-      order by ue.user_id,
-        case ue.role when 'owner' then 1 when 'admin' then 2 else 3 end,
-        ue.created_at
-    ) sub
-    where c.empresa_id is null and c.user_id = sub.user_id;
-  exception when undefined_table then null; end;
-end $$;
+-- Removido backfill por user_id em clientes (modelo agora só por empresa)
 
-do $$ begin
-  begin
-    update public.servicos s
-    set empresa_id = sub.empresa_id
-    from (
-      select distinct on (ue.user_id) ue.user_id, ue.empresa_id
-      from public.user_empresas ue
-      order by ue.user_id,
-        case ue.role when 'owner' then 1 when 'admin' then 2 else 3 end,
-        ue.created_at
-    ) sub
-    where s.empresa_id is null and s.user_id = sub.user_id;
-  exception when undefined_table then null; end;
-end $$;
+-- Removido backfill por user_id em servicos
 
-do $$ begin
-  begin
-    update public.agendamentos a
-    set empresa_id = sub.empresa_id
-    from (
-      select distinct on (ue.user_id) ue.user_id, ue.empresa_id
-      from public.user_empresas ue
-      order by ue.user_id,
-        case ue.role when 'owner' then 1 when 'admin' then 2 else 3 end,
-        ue.created_at
-    ) sub
-    where a.empresa_id is null and a.user_id = sub.user_id;
-  exception when undefined_table then null; end;
-end $$;
+-- Removido backfill por user_id em agendamentos
 
 -- 5) Triggers: preencher empresa_id automaticamente se nulo
 create or replace function public.set_empresa_id_default()
