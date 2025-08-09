@@ -123,7 +123,7 @@ export default function Home() {
           <CardContent>
             <div className="space-y-3">
               {stats.proximosAgendamentos.map((agendamento) => (
-                <div key={agendamento.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div key={agendamento.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
                   <div className="flex-1">
                     <p className="font-medium text-slate-800">{agendamento.cliente}</p>
                     <p className="text-sm text-slate-600">{agendamento.servico}</p>
@@ -154,9 +154,11 @@ export default function Home() {
               {/* Menu Mobile */}
               <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
                 <SheetTrigger asChild>
-                  <Button variant="outline" size="sm">
-                    <Menu className="w-4 h-4" />
-                  </Button>
+                  <div className="flex items-center bg-white rounded-2xl border p-1">
+                    <Button variant="outline" size="sm">
+                      <Menu className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </SheetTrigger>
                 <SheetContent side="right" className="w-64">
                   <SheetHeader>

@@ -231,7 +231,7 @@ export function AgendaView() {
         </div>
 
         <div className="flex items-center gap-2">
-          <div className="flex items-center bg-white rounded-lg border p-1">
+          <div className="flex items-center bg-white rounded-2xl border p-1">
             <Button
               variant={viewType === "calendar" ? "default" : "ghost"}
               size="sm"
@@ -308,7 +308,7 @@ export function AgendaView() {
                   {dayAgendamentos.map((agendamento) => (
                     <div
                       key={agendamento.id}
-                      className="p-2 bg-rose-100 rounded text-xs hover:bg-rose-200 transition-colors cursor-pointer"
+                      className="p-2 bg-rose-100 rounded-xl text-xs hover:bg-rose-200 transition-colors cursor-pointer"
                     >
                       <div className="font-medium text-slate-800">{agendamento.horario}</div>
                       <div className="text-slate-600 truncate" title={agendamento.clienteNome}>
@@ -350,7 +350,7 @@ export function AgendaView() {
                 .map((agendamento) => (
                   <div
                     key={agendamento.id}
-                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 rounded-lg gap-3"
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 rounded-2xl gap-3"
                   >
                     <div className="flex-1">
                       <div className="flex flex-wrap items-center gap-2 mb-2">

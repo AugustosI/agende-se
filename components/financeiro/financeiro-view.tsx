@@ -351,11 +351,11 @@ export function FinanceiroView() {
             {relatorioAtual.transacoes
               .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
               .map((transacao) => (
-                <div key={transacao.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                <div key={transacao.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
                       <span
-                        className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        className={`px-2 py-1 rounded-xl text-xs font-medium ${
                           transacao.tipo === "receita" ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
                         }`}
                       >
