@@ -92,7 +92,8 @@ export function useSupabaseData() {
     try {
       const { data, error } = await supabase
         .from('clientes')
-        .insert([{ ...cliente, user_id: user?.id }])
+  // Trigger preencherá empresa_id via current_user_default_empresa()
+  .insert([{ ...cliente }])
         .select()
         .single()
 
@@ -109,7 +110,8 @@ export function useSupabaseData() {
     try {
       const { data, error } = await supabase
         .from('servicos')
-        .insert([{ ...servico, user_id: user?.id }])
+  // Trigger preencherá empresa_id via current_user_default_empresa()
+  .insert([{ ...servico }])
         .select()
         .single()
 
@@ -126,7 +128,8 @@ export function useSupabaseData() {
     try {
       const { data, error } = await supabase
         .from('agendamentos')
-        .insert([{ ...agendamento, user_id: user?.id }])
+  // Trigger preencherá empresa_id via current_user_default_empresa()
+  .insert([{ ...agendamento }])
         .select(`
           *,
           clientes:cliente_id(nome, telefone),
