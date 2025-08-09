@@ -8,26 +8,39 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useAuth } from "@/hooks/use-auth"
+import { useRouter } from "next/navigation"
 
 export function LoginForm() {
   const [email, setEmail] = useState("")
   const [senha, setSenha] = useState("")
   const [loading, setLoading] = useState(false)
-  const { login } = useAuth()
+  const [error, setError] = useState("")
+  const { signIn } = useAuth()
+  const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError("")
 
-    // Simular login (em produção seria uma chamada à API)
-    setTimeout(() => {
-      login({
-        id: 1,
-        nome: "Prestador Demo",
-        email: email,
-      })
+    try {
+      const result = await signIn(email, senha)
+      if (!result.error) {
+        router.push("/")
+      } else {
+        if (result.error.message?.includes("Invalid login credentials")) {
+          setError("Email ou senha incorretos")
+        } else if (result.error.message?.includes("Email not confirmed")) {
+          setError("Email não confirmado")
+        } else {
+          setError(result.error.message || "Erro na autenticação")
+        }
+      }
+    } catch (err: any) {
+      setError("Erro na autenticação: " + err.message)
+    } finally {
       setLoading(false)
-    }, 1000)
+    }
   }
 
   return (
@@ -60,19 +73,20 @@ export function LoginForm() {
                 value={senha}
                 onChange={(e) => setSenha(e.target.value)}
                 required
+                minLength={6}
               />
             </div>
 
+            {error && (
+              <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            )}
+
             <Button type="submit" className="w-full bg-rose-500 hover:bg-rose-600" disabled={loading}>
-              {loading ? "Entrando..." : "Entrar"}
+              {loading ? "Carregando..." : "Entrar"}
             </Button>
           </form>
-
-          <div className="mt-4 p-3 bg-blue-50 rounded-2xl">
-            <p className="text-sm text-blue-800">
-              <strong>Demo:</strong> Use qualquer e-mail e senha para testar o sistema.
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>
