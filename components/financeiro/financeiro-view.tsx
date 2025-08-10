@@ -247,7 +247,12 @@ export function FinanceiroView() {
                 <DialogTitle>Nova Transação</DialogTitle>
                 <DialogDescription>Adicione uma nova receita ou despesa</DialogDescription>
               </DialogHeader>
-              <Tabs value={tipoTransacao} onValueChange={(value: "receita" | "despesa") => setTipoTransacao(value)}>
+              <Tabs
+                value={tipoTransacao}
+                onValueChange={(value: string) =>
+                  setTipoTransacao(value === 'despesa' ? 'despesa' : 'receita')
+                }
+              >
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="receita">Receita</TabsTrigger>
                   <TabsTrigger value="despesa">Despesa</TabsTrigger>

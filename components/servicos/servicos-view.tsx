@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import { useSupabaseData } from '@/hooks/use-supabase-data'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -8,87 +9,29 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Plus, Clock, DollarSign, Edit, Trash2 } from 'lucide-react'
 
-interface Servico {
-  id: number
-  nome: string
-  duracao: number // em minutos
-  preco: number
-  descricao?: string
-  ativo: boolean
-}
-
 export function ServicosView() {
-  const [servicos, setServicos] = useState<Servico[]>([])
+  const { servicos, adicionarServico, loading } = useSupabaseData()
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [editingServico, setEditingServico] = useState<Servico | null>(null)
+  const [editingServico, setEditingServico] = useState<typeof servicos[0] | null>(null)
 
-  // Dados de exemplo
-  useEffect(() => {
-    const servicosExemplo: Servico[] = [
-      {
-        id: 1,
-        nome: 'Corte + Escova',
-        duracao: 60,
-        preco: 50.00,
-        descricao: 'Corte de cabelo feminino com escova',
-        ativo: true
-      },
-      {
-        id: 2,
-        nome: 'Barba',
-        duracao: 30,
-        preco: 25.00,
-        descricao: 'Aparar e modelar barba',
-        ativo: true
-      },
-      {
-        id: 3,
-        nome: 'Manicure',
-        duracao: 45,
-        preco: 30.00,
-        descricao: 'Cuidados com as unhas das mãos',
-        ativo: true
-      },
-      {
-        id: 4,
-        nome: 'Pedicure',
-        duracao: 60,
-        preco: 35.00,
-        descricao: 'Cuidados com as unhas dos pés',
-        ativo: true
-      }
-    ]
-    setServicos(servicosExemplo)
-  }, [])
-
-  const ServicoForm = ({ servico }: { servico?: Servico }) => {
+  // Formulário simplificado: só adiciona (edição real pode ser implementada depois)
+  const ServicoForm = () => {
     const [formData, setFormData] = useState({
-      nome: servico?.nome || '',
-      duracao: servico?.duracao?.toString() || '',
-      preco: servico?.preco?.toString() || '',
-      descricao: servico?.descricao || ''
+      nome: '',
+      duracao: '',
+      preco: '',
+      descricao: ''
     })
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault()
-      
-      const servicoData: Servico = {
-        id: servico?.id || Date.now(),
+      await adicionarServico({
         nome: formData.nome,
-        duracao: parseInt(formData.duracao),
-        preco: parseFloat(formData.preco),
+        duracao: Number(formData.duracao),
+        preco: Number(formData.preco),
         descricao: formData.descricao,
         ativo: true
-      }
-
-      if (servico) {
-        // Editar serviço existente
-        setServicos(servicos.map(s => s.id === servico.id ? servicoData : s))
-      } else {
-        // Adicionar novo serviço
-        setServicos([...servicos, servicoData])
-      }
-
+      })
       setIsDialogOpen(false)
       setEditingServico(null)
       setFormData({ nome: '', duracao: '', preco: '', descricao: '' })
@@ -106,7 +49,6 @@ export function ServicosView() {
             required
           />
         </div>
-
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="duracao">Duração (minutos) *</Label>
@@ -119,7 +61,6 @@ export function ServicosView() {
               required
             />
           </div>
-
           <div className="space-y-2">
             <Label htmlFor="preco">Preço (R$) *</Label>
             <Input
@@ -133,7 +74,6 @@ export function ServicosView() {
             />
           </div>
         </div>
-
         <div className="space-y-2">
           <Label htmlFor="descricao">Descrição</Label>
           <Input
@@ -143,29 +83,23 @@ export function ServicosView() {
             onChange={(e) => setFormData({...formData, descricao: e.target.value})}
           />
         </div>
-
         <Button type="submit" className="w-full bg-rose-500 hover:bg-rose-600">
-          {servico ? 'Atualizar Serviço' : 'Cadastrar Serviço'}
+          Cadastrar Serviço
         </Button>
       </form>
     )
   }
 
-  const handleEdit = (servico: Servico) => {
+  // TODO: implementar edição, exclusão e toggle real via Supabase
+  const handleEdit = (servico: typeof servicos[0]) => {
     setEditingServico(servico)
     setIsDialogOpen(true)
   }
-
-  const handleDelete = (id: number) => {
-    if (confirm('Tem certeza que deseja excluir este serviço?')) {
-      setServicos(servicos.filter(s => s.id !== id))
-    }
+  const handleDelete = (id: string) => {
+    alert('Exclusão real de serviço ainda não implementada.')
   }
-
-  const toggleStatus = (id: number) => {
-    setServicos(servicos.map(s => 
-      s.id === id ? { ...s, ativo: !s.ativo } : s
-    ))
+  const toggleStatus = (id: string) => {
+    alert('Toggle de status real ainda não implementado.')
   }
 
   return (
@@ -203,7 +137,7 @@ export function ServicosView() {
                 }
               </DialogDescription>
             </DialogHeader>
-            <ServicoForm servico={editingServico || undefined} />
+            <ServicoForm />
           </DialogContent>
         </Dialog>
       </div>
@@ -215,7 +149,7 @@ export function ServicosView() {
             <CardTitle className="text-sm font-medium text-slate-600">Total de Serviços</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-800">{servicos.length}</div>
+            <div className="text-2xl font-bold text-slate-800">{loading ? '...' : servicos.length}</div>
           </CardContent>
         </Card>
 
@@ -225,7 +159,7 @@ export function ServicosView() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-800">
-              {servicos.filter(s => s.ativo).length}
+              {loading ? '...' : servicos.filter(s => s.ativo).length}
             </div>
           </CardContent>
         </Card>
@@ -236,10 +170,9 @@ export function ServicosView() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-800">
-              R$ {servicos.length > 0 
+              {loading ? '...' : `R$ ${servicos.length > 0 
                 ? (servicos.reduce((sum, s) => sum + s.preco, 0) / servicos.length).toFixed(2)
-                : '0.00'
-              }
+                : '0.00'}`}
             </div>
           </CardContent>
         </Card>
@@ -250,10 +183,9 @@ export function ServicosView() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-slate-800">
-              {servicos.length > 0 
+              {loading ? '...' : `${servicos.length > 0 
                 ? Math.round(servicos.reduce((sum, s) => sum + s.duracao, 0) / servicos.length)
-                : 0
-              } min
+                : 0} min`}
             </div>
           </CardContent>
         </Card>
@@ -315,7 +247,7 @@ export function ServicosView() {
         ))}
       </div>
 
-      {servicos.length === 0 && (
+      {!loading && servicos.length === 0 && (
         <Card>
           <CardContent className="text-center py-8">
             <div className="text-slate-500">

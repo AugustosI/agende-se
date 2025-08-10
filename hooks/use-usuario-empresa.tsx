@@ -53,7 +53,7 @@ export function useUsuarioEmpresa() {
 
         // Buscar todas as empresas disponíveis
         const { data: empresasData, error: empresasError } = await supabase
-          .from('empresa')
+          .from('empresas')
           .select('*')
           .order('nome')
 
@@ -128,7 +128,7 @@ export function useUsuarioEmpresa() {
   const criarEmpresa = async (nome: string) => {
     try {
       const { data, error } = await supabase
-        .from('empresa')
+        .from('empresas')
         .insert([{ nome }])
         .select()
         .single()

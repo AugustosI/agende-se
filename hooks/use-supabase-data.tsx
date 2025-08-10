@@ -11,6 +11,8 @@ export interface Cliente {
   email?: string
   endereco?: string
   observacoes?: string
+  // Cliente é considerado ativo por padrão quando 'ativo' é undefined
+  ativo?: boolean
 }
 
 export interface Servico {
@@ -106,6 +108,62 @@ export function useSupabaseData() {
     }
   }
 
+  const atualizarCliente = async (
+    id: string,
+    updates: Partial<Omit<Cliente, 'id'>>
+  ) => {
+    try {
+      const { data, error } = await supabase
+        .from('clientes')
+        .update({ ...updates })
+        .eq('id', id)
+        .select('*')
+        .single()
+
+      if (error) throw error
+      if (data) setClientes(clientes.map(c => (c.id === id ? data : c)))
+      return { success: true, data }
+    } catch (error) {
+      console.error('Erro ao atualizar cliente:', error)
+      return { success: false, error }
+    }
+  }
+
+  const removerCliente = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('clientes')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+      setClientes(clientes.filter(c => c.id !== id))
+      return { success: true }
+    } catch (error) {
+      console.error('Erro ao remover cliente:', error)
+      return { success: false, error }
+    }
+  }
+
+  // Ativar/Desativar cliente
+  const toggleAtivoCliente = async (id: string, ativo: boolean) => {
+    try {
+      const { data, error } = await supabase
+        .from('clientes')
+        .update({ ativo })
+        .eq('id', id)
+        .select('*')
+        .single()
+
+      if (error) throw error
+      if (data) setClientes(clientes.map(c => (c.id === id ? data : c)))
+      return { success: true, data }
+    } catch (error) {
+      console.error('Erro ao alterar status do cliente:', error)
+      return { success: false, error }
+    }
+  }
+
   const adicionarServico = async (servico: Omit<Servico, 'id'>) => {
     try {
       const { data, error } = await supabase
@@ -194,7 +252,7 @@ export function useSupabaseData() {
     return {
       agendamentosHoje: agendamentosHoje.length,
       receitaMes,
-      clientesAtivos: clientes.length,
+  clientesAtivos: clientes.filter(c => c.ativo !== false).length,
       proximosAgendamentos: agendamentos
         .filter(ag => ag.status !== 'cancelado' && ag.status !== 'concluido')
         .slice(0, 3)
@@ -216,6 +274,9 @@ export function useSupabaseData() {
     agendamentos,
     loading,
     adicionarCliente,
+    atualizarCliente,
+    removerCliente,
+    toggleAtivoCliente,
     adicionarServico,
     adicionarAgendamento,
     atualizarStatusAgendamento,
