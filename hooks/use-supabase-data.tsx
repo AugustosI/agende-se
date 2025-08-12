@@ -39,6 +39,19 @@ export interface Agendamento {
   servicos?: Servico
 }
 
+export interface Transacao {
+  id: string
+  tipo: 'receita' | 'despesa'
+  categoria: string
+  descricao: string
+  valor: number
+  data: string
+  agendamento_id?: string
+  empresa_id: string
+  created_at: string
+  updated_at: string
+}
+
 export function useSupabaseData() {
   const { user } = useAuth()
   const supabase = createClient()
@@ -46,6 +59,7 @@ export function useSupabaseData() {
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [servicos, setServicos] = useState<Servico[]>([])
   const [agendamentos, setAgendamentos] = useState<Agendamento[]>([])
+  const [transacoes, setTransacoes] = useState<Transacao[]>([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -76,9 +90,16 @@ export function useSupabaseData() {
           .order('data_agendamento', { ascending: true })
           .order('hora_inicio', { ascending: true })
 
+        // Buscar transações
+        const { data: transacoesData } = await supabase
+          .from('transacoes')
+          .select('*')
+          .order('data', { ascending: false })
+
         if (clientesData) setClientes(clientesData)
         if (servicosData) setServicos(servicosData)
         if (agendamentosData) setAgendamentos(agendamentosData)
+        if (transacoesData) setTransacoes(transacoesData)
       } catch (error) {
         console.error('Erro ao buscar dados:', error)
       } finally {
@@ -287,6 +308,58 @@ export function useSupabaseData() {
     }
   }
 
+  // Funções para transações financeiras
+  const adicionarTransacao = async (transacao: Omit<Transacao, 'id' | 'empresa_id' | 'created_at' | 'updated_at'>) => {
+    try {
+      const { data, error } = await supabase
+        .from('transacoes')
+        .insert([{ ...transacao }])
+        .select()
+        .single()
+
+      if (error) throw error
+      if (data) setTransacoes([data, ...transacoes])
+      return { success: true, data }
+    } catch (error) {
+      console.error('Erro ao adicionar transação:', error)
+      return { success: false, error }
+    }
+  }
+
+  const atualizarTransacao = async (id: string, updates: Partial<Omit<Transacao, 'id' | 'empresa_id' | 'created_at' | 'updated_at'>>) => {
+    try {
+      const { data, error } = await supabase
+        .from('transacoes')
+        .update({ ...updates })
+        .eq('id', id)
+        .select()
+        .single()
+
+      if (error) throw error
+      if (data) setTransacoes(transacoes.map(t => t.id === id ? data : t))
+      return { success: true, data }
+    } catch (error) {
+      console.error('Erro ao atualizar transação:', error)
+      return { success: false, error }
+    }
+  }
+
+  const removerTransacao = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('transacoes')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+      setTransacoes(transacoes.filter(t => t.id !== id))
+      return { success: true }
+    } catch (error) {
+      console.error('Erro ao remover transação:', error)
+      return { success: false, error }
+    }
+  }
+
   // Estatísticas do dashboard
   const getEstatisticas = () => {
     const hoje = new Date().toISOString().split('T')[0]
@@ -327,6 +400,7 @@ export function useSupabaseData() {
     clientes,
     servicos,
     agendamentos,
+    transacoes,
     loading,
     adicionarCliente,
     atualizarCliente,
@@ -338,6 +412,9 @@ export function useSupabaseData() {
     toggleAtivoServico,
     adicionarAgendamento,
     atualizarStatusAgendamento,
+    adicionarTransacao,
+    atualizarTransacao,
+    removerTransacao,
     getEstatisticas
   }
 }

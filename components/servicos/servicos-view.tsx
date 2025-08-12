@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger, DialogClose } from "@/components/ui/dialog"
 import { Plus, Clock, DollarSign, MoreVertical, CheckCircle2, CircleSlash2, Search } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
@@ -17,6 +17,8 @@ export function ServicosView() {
   const [actionMenuFor, setActionMenuFor] = useState<string | null>(null)
   const [statusFilter, setStatusFilter] = useState<'todos' | 'ativos' | 'inativos'>('todos')
   const [searchTerm, setSearchTerm] = useState("")
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [selectedServicoId, setSelectedServicoId] = useState<string | null>(null)
 
   // Formulário para adicionar e editar serviços
   const ServicoForm = () => {
@@ -143,16 +145,10 @@ export function ServicosView() {
     setIsDialogOpen(true)
   }
 
-  const handleDelete = async (id: string, nome: string) => {
-    if (window.confirm(`Tem certeza que deseja excluir o serviço "${nome}"? Esta ação não pode ser desfeita.`)) {
-      const result = await removerServico(id)
-      if (result.success) {
-        alert('Serviço excluído com sucesso!')
-      } else {
-        console.error('Erro ao excluir serviço:', result.error)
-        alert('Erro ao excluir serviço. Tente novamente.')
-      }
-    }
+  const handleDelete = (id: string) => {
+    setSelectedServicoId(id)
+    setIsDeleteOpen(true)
+    setActionMenuFor(null) // Fechar o menu de ações
   }
 
   const toggleStatus = async (id: string, ativoAtual: boolean) => {
@@ -355,8 +351,7 @@ export function ServicosView() {
                           className="w-full text-left px-3 py-2 text-rose-600 hover:bg-rose-50"
                           onClick={(e) => {
                             e.stopPropagation()
-                            setActionMenuFor(null)
-                            handleDelete(servico.id, servico.nome)
+                            handleDelete(servico.id)
                           }}
                         >
                           Excluir
@@ -403,6 +398,40 @@ export function ServicosView() {
           </CardContent>
         </Card>
       )}
+
+      {/* Diálogo de Confirmação de Exclusão */}
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Excluir Serviço</DialogTitle>
+            <DialogDescription>
+              Tem certeza que deseja excluir este serviço? Esta ação não pode ser desfeita.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <DialogClose asChild>
+              <Button variant="outline">Cancelar</Button>
+            </DialogClose>
+            <Button
+              className="bg-rose-600 hover:bg-rose-700"
+              onClick={async () => {
+                if (!selectedServicoId) return
+                const result = await removerServico(selectedServicoId)
+                if (result.success) {
+                  console.log('Serviço excluído com sucesso!')
+                } else {
+                  console.error('Erro ao excluir serviço:', result.error)
+                  alert('Erro ao excluir serviço. Tente novamente.')
+                }
+                setIsDeleteOpen(false)
+                setSelectedServicoId(null)
+              }}
+            >
+              Excluir
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
