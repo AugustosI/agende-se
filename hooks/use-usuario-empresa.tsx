@@ -40,10 +40,7 @@ export function useUsuarioEmpresa() {
         // Buscar dados do usuário atual com empresa
         const { data: usuarioData, error: usuarioError } = await supabase
           .from('usuario')
-          .select(`
-            *,
-            empresa:empresa_id(*)
-          `)
+          .select(`*, empresa:empresa_id(*)`)
           .eq('auth_user_id', user.id)
           .single()
 
@@ -51,10 +48,18 @@ export function useUsuarioEmpresa() {
           throw usuarioError
         }
 
-        // Buscar todas as empresas disponíveis
+        // Buscar empresas vinculadas ao usuário (multi-tenancy)
         const { data: empresasData, error: empresasError } = await supabase
           .from('empresas')
           .select('*')
+          .in('id',
+            (
+              await supabase
+                .from('user_empresas')
+                .select('empresa_id')
+                .eq('user_id', user.id)
+            ).data?.map((ue: any) => ue.empresa_id) || []
+          )
           .order('nome')
 
         if (empresasError) {
@@ -64,8 +69,14 @@ export function useUsuarioEmpresa() {
         setUsuario(usuarioData)
         setEmpresas(empresasData || [])
       } catch (err: any) {
-        console.error('Erro ao buscar dados do usuário/empresa:', err)
-        setError(err.message || 'Erro ao carregar dados')
+        // Mostra erro real do Supabase
+        if (err && err.message) {
+          setError(err.message)
+          console.error('Erro ao buscar dados do usuário/empresa:', err.message, err)
+        } else {
+          setError('Erro ao carregar dados')
+          console.error('Erro ao buscar dados do usuário/empresa:', err)
+        }
       } finally {
         setLoading(false)
       }

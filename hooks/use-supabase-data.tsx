@@ -59,11 +59,10 @@ export function useSupabaseData() {
           .select('*')
           .order('nome')
 
-        // Buscar serviços
+        // Buscar serviços (todos - ativos e inativos)
         const { data: servicosData } = await supabase
           .from('servicos')
           .select('*')
-          .eq('ativo', true)
           .order('nome')
 
         // Buscar agendamentos com dados dos clientes e serviços
@@ -168,8 +167,8 @@ export function useSupabaseData() {
     try {
       const { data, error } = await supabase
         .from('servicos')
-  // Trigger preencherá empresa_id via current_user_default_empresa()
-  .insert([{ ...servico }])
+        // Trigger preencherá empresa_id via current_user_default_empresa()
+        .insert([{ ...servico }])
         .select()
         .single()
 
@@ -178,6 +177,62 @@ export function useSupabaseData() {
       return { success: true, data }
     } catch (error) {
       console.error('Erro ao adicionar serviço:', error)
+      return { success: false, error }
+    }
+  }
+
+  const atualizarServico = async (
+    id: string,
+    updates: Partial<Omit<Servico, 'id'>>
+  ) => {
+    try {
+      const { data, error } = await supabase
+        .from('servicos')
+        .update({ ...updates })
+        .eq('id', id)
+        .select('*')
+        .single()
+
+      if (error) throw error
+      if (data) setServicos(servicos.map(s => (s.id === id ? data : s)))
+      return { success: true, data }
+    } catch (error) {
+      console.error('Erro ao atualizar serviço:', error)
+      return { success: false, error }
+    }
+  }
+
+  const removerServico = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('servicos')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+      setServicos(servicos.filter(s => s.id !== id))
+      return { success: true }
+    } catch (error) {
+      console.error('Erro ao remover serviço:', error)
+      return { success: false, error }
+    }
+  }
+
+  // Ativar/Desativar serviço
+  const toggleAtivoServico = async (id: string, ativo: boolean) => {
+    try {
+      const { data, error } = await supabase
+        .from('servicos')
+        .update({ ativo })
+        .eq('id', id)
+        .select('*')
+        .single()
+
+      if (error) throw error
+      if (data) setServicos(servicos.map(s => (s.id === id ? data : s)))
+      return { success: true, data }
+    } catch (error) {
+      console.error('Erro ao alterar status do serviço:', error)
       return { success: false, error }
     }
   }
@@ -278,6 +333,9 @@ export function useSupabaseData() {
     removerCliente,
     toggleAtivoCliente,
     adicionarServico,
+    atualizarServico,
+    removerServico,
+    toggleAtivoServico,
     adicionarAgendamento,
     atualizarStatusAgendamento,
     getEstatisticas
