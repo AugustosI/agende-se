@@ -15,28 +15,20 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogClose,
 } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Plus, TrendingUp, TrendingDown, DollarSign } from "lucide-react"
-import { format, startOfMonth, endOfMonth, subMonths } from "date-fns"
+import { Plus, TrendingUp, TrendingDown, DollarSign, Trash2, Edit, Search, Filter, Calendar, MoreVertical } from "lucide-react"
+import { format, startOfMonth, endOfMonth, subMonths, subDays, startOfDay, endOfDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
 
 interface Transacao {
-  id: number
+  id: string
   tipo: "receita" | "despesa"
-  categoria: string
-  descricao: string
   valor: number
+  descricao: string
   data: string
-  agendamentoId?: number
-}
-
-interface RelatorioMensal {
-  mes: string
-  receitas: number
-  despesas: number
-  lucro: number
-  transacoes: Transacao[]
+  categoria: string
 }
 
 export function FinanceiroView() {
@@ -44,72 +36,144 @@ export function FinanceiroView() {
   const [mesAtual, setMesAtual] = useState(new Date())
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [tipoTransacao, setTipoTransacao] = useState<"receita" | "despesa">("receita")
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false)
+  const [selectedTransacaoId, setSelectedTransacaoId] = useState<string | null>(null)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const [transacaoParaEditar, setTransacaoParaEditar] = useState<Transacao | null>(null)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
+  const [actionMenuFor, setActionMenuFor] = useState<string | null>(null)
+  
+  // Estado dos filtros
+  const [filtros, setFiltros] = useState({
+    busca: '',
+    tipo: 'todos' as 'todos' | 'receita' | 'despesa',
+    data: 'este-mes' as 'hoje' | 'ultimos-7' | 'ultimos-15' | 'ultimos-30' | 'este-mes' | 'personalizado',
+    dataInicio: '',
+    dataFim: ''
+  })
 
-  // Dados de exemplo
+  // Mock data
   useEffect(() => {
-    const hoje = new Date()
-    const transacoesExemplo: Transacao[] = [
+    setTransacoes([
       {
-        id: 1,
-        tipo: "receita",
-        categoria: "Serviços",
-        descricao: "Corte + Escova - Maria Silva",
-        valor: 50.0,
-        data: format(hoje, "yyyy-MM-dd"),
-        agendamentoId: 1,
+        id: '1',
+        tipo: 'receita',
+        valor: 150,
+        descricao: 'Corte + Escova - Maria Silva',
+        data: '2024-01-15',
+        categoria: 'Serviços'
       },
       {
-        id: 2,
-        tipo: "receita",
-        categoria: "Serviços",
-        descricao: "Barba - João Santos",
-        valor: 25.0,
-        data: format(hoje, "yyyy-MM-dd"),
-        agendamentoId: 2,
+        id: '2',
+        tipo: 'receita',
+        valor: 80,
+        descricao: 'Manicure - Ana Costa',
+        data: '2024-01-15',
+        categoria: 'Serviços'
       },
       {
-        id: 3,
-        tipo: "despesa",
-        categoria: "Produtos",
-        descricao: "Shampoo e Condicionador",
-        valor: 45.0,
-        data: format(hoje, "yyyy-MM-dd"),
-      },
-      {
-        id: 4,
-        tipo: "despesa",
-        categoria: "Fixas",
-        descricao: "Aluguel do Salão",
-        valor: 800.0,
-        data: format(startOfMonth(hoje), "yyyy-MM-dd"),
-      },
-    ]
-    setTransacoes(transacoesExemplo)
+        id: '3',
+        tipo: 'despesa',
+        valor: 200,
+        descricao: 'Compra de produtos',
+        data: '2024-01-14',
+        categoria: 'Estoque'
+      }
+    ])
   }, [])
 
-  const getRelatorioMensal = (mes: Date): RelatorioMensal => {
-    const inicioMes = startOfMonth(mes)
-    const fimMes = endOfMonth(mes)
-
-    const transacoesMes = transacoes.filter((t) => {
-      const dataTransacao = new Date(t.data)
-      return dataTransacao >= inicioMes && dataTransacao <= fimMes
-    })
-
-    const receitas = transacoesMes.filter((t) => t.tipo === "receita").reduce((sum, t) => sum + t.valor, 0)
-
-    const despesas = transacoesMes.filter((t) => t.tipo === "despesa").reduce((sum, t) => sum + t.valor, 0)
-
-    return {
-      mes: format(mes, "MMMM yyyy", { locale: ptBR }),
-      receitas,
-      despesas,
-      lucro: receitas - despesas,
-      transacoes: transacoesMes,
+  // Função para obter o intervalo de datas baseado no filtro
+  const getIntervaloData = () => {
+    const hoje = new Date()
+    
+    switch (filtros.data) {
+      case 'hoje':
+        return {
+          inicio: startOfDay(hoje),
+          fim: endOfDay(hoje)
+        }
+      case 'ultimos-7':
+        return {
+          inicio: startOfDay(subDays(hoje, 7)),
+          fim: endOfDay(hoje)
+        }
+      case 'ultimos-15':
+        return {
+          inicio: startOfDay(subDays(hoje, 15)),
+          fim: endOfDay(hoje)
+        }
+      case 'ultimos-30':
+        return {
+          inicio: startOfDay(subDays(hoje, 30)),
+          fim: endOfDay(hoje)
+        }
+      case 'este-mes':
+        return {
+          inicio: startOfMonth(hoje),
+          fim: endOfMonth(hoje)
+        }
+      case 'personalizado':
+        if (filtros.dataInicio && filtros.dataFim) {
+          return {
+            inicio: startOfDay(new Date(filtros.dataInicio)),
+            fim: endOfDay(new Date(filtros.dataFim))
+          }
+        }
+        return {
+          inicio: startOfMonth(hoje),
+          fim: endOfMonth(hoje)
+        }
+      default:
+        return {
+          inicio: startOfMonth(hoje),
+          fim: endOfMonth(hoje)
+        }
     }
   }
 
-  const relatorioAtual = getRelatorioMensal(mesAtual)
+  // Função para filtrar transações
+  const getTransacoesFiltradas = () => {
+    const { inicio, fim } = getIntervaloData()
+    
+    return transacoes.filter((transacao) => {
+      // Filtro por data
+      const dataTransacao = new Date(transacao.data)
+      const dentroPeriodo = dataTransacao >= inicio && dataTransacao <= fim
+      
+      // Filtro por tipo
+      const tipoMatch = filtros.tipo === 'todos' || transacao.tipo === filtros.tipo
+      
+      // Filtro por busca
+      const buscaMatch = filtros.busca === '' || 
+        transacao.descricao.toLowerCase().includes(filtros.busca.toLowerCase()) ||
+        transacao.categoria.toLowerCase().includes(filtros.busca.toLowerCase())
+      
+      return dentroPeriodo && tipoMatch && buscaMatch
+    })
+  }
+
+  // Função para verificar se há filtros ativos
+  const temFiltrosAtivos = () => {
+    return filtros.busca !== '' || 
+           filtros.tipo !== 'todos' || 
+           filtros.data !== 'este-mes'
+  }
+
+  const getRelatorioMensal = (transacoesFiltradas: Transacao[]) => {
+    const receitas = transacoesFiltradas.filter((t) => t.tipo === "receita").reduce((sum, t) => sum + t.valor, 0)
+    const despesas = transacoesFiltradas.filter((t) => t.tipo === "despesa").reduce((sum, t) => sum + t.valor, 0)
+
+    return {
+      mes: format(new Date(), "MMMM yyyy", { locale: ptBR }),
+      receitas,
+      despesas,
+      lucro: receitas - despesas,
+      transacoes: transacoesFiltradas,
+    }
+  }
+
+  const transacoesFiltradas = getTransacoesFiltradas()
+  const relatorioAtual = getRelatorioMensal(transacoesFiltradas)
 
   const NovaTransacaoForm = () => {
     const [formData, setFormData] = useState({
@@ -120,16 +184,11 @@ export function FinanceiroView() {
       data: format(new Date(), "yyyy-MM-dd"),
     })
 
-    const categorias = {
-      receita: ["Serviços", "Produtos", "Outros"],
-      despesa: ["Produtos", "Fixas", "Marketing", "Equipamentos", "Outros"],
-    }
-
     const handleSubmit = (e: React.FormEvent) => {
       e.preventDefault()
 
       const novaTransacao: Transacao = {
-        id: Date.now(),
+        id: Date.now().toString(),
         tipo: formData.tipo as "receita" | "despesa",
         categoria: formData.categoria,
         descricao: formData.descricao,
@@ -167,19 +226,14 @@ export function FinanceiroView() {
         </div>
 
         <div className="space-y-2">
-          <Label>Categoria</Label>
-          <Select value={formData.categoria} onValueChange={(value) => setFormData({ ...formData, categoria: value })}>
-            <SelectTrigger>
-              <SelectValue placeholder="Selecione uma categoria" />
-            </SelectTrigger>
-            <SelectContent>
-              {categorias[formData.tipo].map((cat) => (
-                <SelectItem key={cat} value={cat}>
-                  {cat}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label htmlFor="categoria">Categoria</Label>
+          <Input
+            id="categoria"
+            placeholder="Ex: Serviços, Estoque, Marketing"
+            value={formData.categoria}
+            onChange={(e) => setFormData({ ...formData, categoria: e.target.value })}
+            required
+          />
         </div>
 
         <div className="space-y-2">
@@ -235,6 +289,16 @@ export function FinanceiroView() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            className={temFiltrosAtivos() ? 'bg-rose-50 border-rose-200' : ''}
+          >
+            <Filter className="w-4 h-4 mr-2" />
+            Filtros
+            {temFiltrosAtivos() && <span className="ml-1 bg-rose-500 text-white rounded-full w-2 h-2" />}
+          </Button>
+          
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
             <DialogTrigger asChild>
               <Button className="bg-rose-500 hover:bg-rose-600">
@@ -247,94 +311,135 @@ export function FinanceiroView() {
                 <DialogTitle>Nova Transação</DialogTitle>
                 <DialogDescription>Adicione uma nova receita ou despesa</DialogDescription>
               </DialogHeader>
-              <Tabs value={tipoTransacao} onValueChange={(value: "receita" | "despesa") => setTipoTransacao(value)}>
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="receita">Receita</TabsTrigger>
-                  <TabsTrigger value="despesa">Despesa</TabsTrigger>
-                </TabsList>
-                <TabsContent value="receita" className="mt-4">
-                  <NovaTransacaoForm />
-                </TabsContent>
-                <TabsContent value="despesa" className="mt-4">
-                  <NovaTransacaoForm />
-                </TabsContent>
-              </Tabs>
+              <NovaTransacaoForm />
             </DialogContent>
           </Dialog>
         </div>
       </div>
 
-      {/* Seletor de Mês */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <Button variant="outline" onClick={() => setMesAtual(subMonths(mesAtual, 1))}>
-              Mês Anterior
-            </Button>
-
-            <CardTitle className="text-lg capitalize">{relatorioAtual.mes}</CardTitle>
-
-            <Button variant="outline" onClick={() => setMesAtual(new Date())}>
-              Mês Atual
-            </Button>
-          </div>
-        </CardHeader>
-      </Card>
+      {/* Painel de Filtros */}
+      {isFilterOpen && (
+        <Card className="filter-container">
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <Label htmlFor="busca">Buscar</Label>
+                <Input
+                  id="busca"
+                  placeholder="Descrição ou categoria..."
+                  value={filtros.busca}
+                  onChange={(e) => setFiltros({ ...filtros, busca: e.target.value })}
+                />
+              </div>
+              
+              <div>
+                <Label>Tipo</Label>
+                <Select value={filtros.tipo} onValueChange={(value: any) => setFiltros({ ...filtros, tipo: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="todos">Todos</SelectItem>
+                    <SelectItem value="receita">Receitas</SelectItem>
+                    <SelectItem value="despesa">Despesas</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div>
+                <Label>Período</Label>
+                <Select value={filtros.data} onValueChange={(value: any) => setFiltros({ ...filtros, data: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hoje">Hoje</SelectItem>
+                    <SelectItem value="ultimos-7">Últimos 7 dias</SelectItem>
+                    <SelectItem value="ultimos-15">Últimos 15 dias</SelectItem>
+                    <SelectItem value="ultimos-30">Últimos 30 dias</SelectItem>
+                    <SelectItem value="este-mes">Este mês</SelectItem>
+                    <SelectItem value="personalizado">Personalizado</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="flex items-end">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setFiltros({ busca: '', tipo: 'todos', data: 'este-mes', dataInicio: '', dataFim: '' })}
+                  disabled={!temFiltrosAtivos()}
+                >
+                  Limpar Filtros
+                </Button>
+              </div>
+            </div>
+            
+            {filtros.data === 'personalizado' && (
+              <div className="grid grid-cols-2 gap-4 mt-4">
+                <div>
+                  <Label htmlFor="dataInicio">Data Início</Label>
+                  <Input
+                    id="dataInicio"
+                    type="date"
+                    value={filtros.dataInicio}
+                    onChange={(e) => setFiltros({ ...filtros, dataInicio: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="dataFim">Data Fim</Label>
+                  <Input
+                    id="dataFim"
+                    type="date"
+                    value={filtros.dataFim}
+                    onChange={(e) => setFiltros({ ...filtros, dataFim: e.target.value })}
+                  />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border-l-4 border-l-emerald-400">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-600 flex items-center">
-              <TrendingUp className="w-4 h-4 mr-2" />
+              <TrendingUp className="w-4 h-4 mr-2 text-emerald-500" />
               Receitas
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-emerald-600">
-              R$ {relatorioAtual.receitas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+              R$ {relatorioAtual.receitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-red-400">
+        <Card className="border-l-4 border-l-rose-400">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-600 flex items-center">
-              <TrendingDown className="w-4 h-4 mr-2" />
+              <TrendingDown className="w-4 h-4 mr-2 text-rose-500" />
               Despesas
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">
-              R$ {relatorioAtual.despesas.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
+            <div className="text-2xl font-bold text-rose-600">
+              R$ {relatorioAtual.despesas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-blue-400">
+        <Card className={`border-l-4 ${relatorioAtual.lucro >= 0 ? 'border-l-blue-400' : 'border-l-orange-400'}`}>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-slate-600 flex items-center">
-              <DollarSign className="w-4 h-4 mr-2" />
-              Lucro
+              <DollarSign className="w-4 h-4 mr-2 text-blue-500" />
+              {relatorioAtual.lucro >= 0 ? 'Lucro' : 'Prejuízo'}
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${relatorioAtual.lucro >= 0 ? "text-blue-600" : "text-red-600"}`}>
-              R$ {relatorioAtual.lucro.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-purple-400">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600">Margem</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-purple-600">
-              {relatorioAtual.receitas > 0
-                ? ((relatorioAtual.lucro / relatorioAtual.receitas) * 100).toFixed(1)
-                : "0.0"}
-              %
+            <div className={`text-2xl font-bold ${relatorioAtual.lucro >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>
+              R$ {Math.abs(relatorioAtual.lucro).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
           </CardContent>
         </Card>
@@ -343,45 +448,56 @@ export function FinanceiroView() {
       {/* Lista de Transações */}
       <Card>
         <CardHeader>
-          <CardTitle>Transações do Mês</CardTitle>
-          <CardDescription>{relatorioAtual.transacoes.length} transação(ões) encontrada(s)</CardDescription>
+          <CardTitle className="flex items-center justify-between">
+            Transações 
+            {temFiltrosAtivos() && (
+              <span className="text-sm text-slate-500 font-normal">
+                ({transacoesFiltradas.length} de {transacoes.length})
+              </span>
+            )}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {relatorioAtual.transacoes
+            {transacoesFiltradas
               .sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime())
               .map((transacao) => (
-                <div key={transacao.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                <div
+                  key={transacao.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-slate-50 rounded-2xl gap-3"
+                >
                   <div className="flex-1">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className={`px-2 py-1 rounded-xl text-xs font-medium ${
-                          transacao.tipo === "receita" ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"
-                        }`}
-                      >
-                        {transacao.tipo === "receita" ? "Receita" : "Despesa"}
+                    <div className="flex flex-wrap items-center gap-2 mb-2">
+                      <Calendar className="w-4 h-4 text-slate-500" />
+                      <span className="font-medium text-sm">
+                        {format(new Date(transacao.data), "dd/MM/yyyy", { locale: ptBR })}
                       </span>
-                      <span className="text-sm text-slate-600">{transacao.categoria}</span>
+                      <span className="text-xs bg-slate-200 px-2 py-1 rounded-full">
+                        {transacao.categoria}
+                      </span>
                     </div>
-                    <p className="font-medium text-slate-800 mt-1">{transacao.descricao}</p>
-                    <p className="text-sm text-slate-600">
-                      {format(new Date(transacao.data), "dd/MM/yyyy", { locale: ptBR })}
-                    </p>
+                    <p className="text-lg font-medium text-slate-800 mb-1">{transacao.descricao}</p>
                   </div>
-                  <div className="text-right">
-                    <p
-                      className={`text-lg font-bold ${
-                        transacao.tipo === "receita" ? "text-emerald-600" : "text-red-600"
-                      }`}
-                    >
-                      {transacao.tipo === "receita" ? "+" : "-"} R$ {transacao.valor.toFixed(2)}
-                    </p>
+                  <div className="text-right sm:text-right flex items-center gap-2">
+                    <div>
+                      <p className={`font-bold text-lg ${
+                        transacao.tipo === 'receita' ? 'text-emerald-600' : 'text-rose-600'
+                      }`}>
+                        {transacao.tipo === 'receita' ? '+' : '-'}R$ {transacao.valor.toFixed(2)}
+                      </p>
+                      <p className="text-sm text-slate-600 capitalize">{transacao.tipo}</p>
+                    </div>
                   </div>
                 </div>
               ))}
 
-            {relatorioAtual.transacoes.length === 0 && (
-              <div className="text-center py-8 text-slate-500">Nenhuma transação encontrada para este mês</div>
+            {transacoesFiltradas.length === 0 && (
+              <div className="text-center py-8 text-slate-500">
+                {temFiltrosAtivos() 
+                  ? "Nenhuma transação encontrada com os filtros aplicados" 
+                  : "Nenhuma transação cadastrada ainda"
+                }
+              </div>
             )}
           </div>
         </CardContent>
