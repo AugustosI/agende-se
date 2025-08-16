@@ -8,19 +8,45 @@ import { AgendaView } from "@/components/agenda/agenda-view"
 import { FinanceiroView } from "@/components/financeiro/financeiro-view"
 import { ClientesView } from "@/components/clientes/clientes-view"
 import { ServicosView } from "@/components/servicos/servicos-view"
+import { PerfilUsuarioView } from "@/components/usuario/perfil-usuario-view"
 import { LoginForm } from "@/components/auth/login-form"
 import { useAuth } from "@/hooks/use-auth"
+import { useSupabaseData } from "@/hooks/use-supabase-data"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { useRouter } from "next/navigation"
 
-type ViewType = "dashboard" | "agenda" | "financeiro" | "clientes" | "servicos"
+type ViewType = "dashboard" | "agenda" | "financeiro" | "clientes" | "servicos" | "perfil"
 
 export default function Home() {
   const [currentView, setCurrentView] = useState<ViewType>("dashboard")
-  const { user, logout } = useAuth()
+  const { user, loading, signOut } = useAuth()
+  const { getEstatisticas, loading: dataLoading } = useSupabaseData()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const router = useRouter()
+
+  useEffect(() => {
+    if (!loading && !user) {
+      router.push("/login")
+    }
+  }, [user, loading, router])
+
+  if (loading || dataLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-rose-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-rose-500 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Carregando...</p>
+        </div>
+      </div>
+    )
+  }
 
   if (!user) {
-    return <LoginForm />
+    return null // Será redirecionado para /login
+  }
+
+  const handleLogout = async () => {
+    await signOut()
   }
 
   const renderView = () => {
@@ -33,32 +59,15 @@ export default function Home() {
         return <ClientesView />
       case "servicos":
         return <ServicosView />
+      case "perfil":
+        return <PerfilUsuarioView />
       default:
         return <DashboardView />
     }
   }
 
   const DashboardView = () => {
-    const [stats, setStats] = useState({
-      agendamentosHoje: 0,
-      receitaMes: 0,
-      clientesAtivos: 0,
-      proximosAgendamentos: [],
-    })
-
-    useEffect(() => {
-      // Simular carregamento de estatísticas
-      setStats({
-        agendamentosHoje: 3,
-        receitaMes: 2450.0,
-        clientesAtivos: 15,
-        proximosAgendamentos: [
-          { id: 1, cliente: "Maria Silva", servico: "Corte + Escova", horario: "14:00", data: "Hoje" },
-          { id: 2, cliente: "João Santos", servico: "Barba", horario: "15:30", data: "Hoje" },
-          { id: 3, cliente: "Ana Costa", servico: "Manicure", horario: "09:00", data: "Amanhã" },
-        ],
-      })
-    }, [])
+    const stats = getEstatisticas()
 
     return (
       <div className="space-y-6">
@@ -248,12 +257,26 @@ export default function Home() {
                         Serviços
                       </Button>
 
+                      <Button
+                        variant={currentView === "perfil" ? "default" : "ghost"}
+                        className={`w-full justify-start ${
+                          currentView === "perfil" ? "bg-rose-100 text-rose-700" : ""
+                        }`}
+                        onClick={() => {
+                          setCurrentView("perfil")
+                          setIsMobileMenuOpen(false)
+                        }}
+                      >
+                        <Settings className="w-4 h-4 mr-2" />
+                        Perfil
+                      </Button>
+
                       <div className="border-t pt-2 mt-4">
                         <Button
                           variant="outline"
                           className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 bg-transparent"
                           onClick={() => {
-                            logout()
+                            handleLogout()
                             setIsMobileMenuOpen(false)
                           }}
                         >
@@ -268,7 +291,7 @@ export default function Home() {
                         variant="outline"
                         className="w-full justify-start text-red-600 hover:text-red-700 hover:bg-red-50 bg-transparent"
                         onClick={() => {
-                          logout()
+                          handleLogout()
                           setIsMobileMenuOpen(false)
                         }}
                       >
@@ -351,6 +374,19 @@ export default function Home() {
               >
                 <Settings className="w-4 h-4 mr-2" />
                 Serviços
+              </Button>
+
+              <Button
+                variant={currentView === "perfil" ? "default" : "ghost"}
+                className={`w-full justify-start ${
+                  currentView === "perfil"
+                    ? "bg-rose-500 hover:bg-rose-600 text-white"
+                    : "text-slate-700 hover:bg-slate-100"
+                }`}
+                onClick={() => setCurrentView("perfil")}
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                Perfil
               </Button>
             </nav>
           </aside>
