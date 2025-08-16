@@ -9,9 +9,9 @@ export const metadata: Metadata = {
   title: "Agende-se - Sistema de Agendamento",
   description: "Sistema web responsivo para gerenciar agendas de clientes e controle financeiro para prestadores de serviços",
   manifest: "/manifest.json",
-  themeColor: "#f43f5e",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
     generator: 'v0.dev'
+  // Removed unsupported fields
+  // themeColor and viewport will be added as meta tags in the head
 }
 
 export default function RootLayout({
@@ -27,6 +27,9 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Agende-se" />
+  {/* Move themeColor and viewport to explicit meta tags to satisfy Next's metadata validation for Edge runtime */}
+  <meta name="theme-color" content="#f43f5e" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
       </head>
       <body className={inter.className}>
         <AuthProvider>
